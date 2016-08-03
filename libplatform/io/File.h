@@ -31,7 +31,6 @@ public:
     virtual bool write( const void* buffer, Size size, Size& nout, Size maxChunkSize ) = 0;
     virtual bool close() = 0;
     virtual bool getSize( Size& nout ) = 0;
-
 protected:
     FileProvider() { }
 };

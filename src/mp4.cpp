@@ -1134,6 +1134,34 @@ MP4FileHandle MP4ReadProvider( const char* fileName, const MP4FileProvider* file
         return MP4_INVALID_TRACK_ID;
     }
 
+    MP4TrackId MP4AddTSC2VideoTrack(
+        MP4FileHandle hFile,
+        uint32_t timeScale,
+        MP4Duration sampleDuration,
+        uint16_t width,
+        uint16_t height)
+    {
+        if (MP4_IS_VALID_FILE_HANDLE(hFile)) {
+            try {
+                MP4File *pFile = (MP4File *)hFile;
+
+                return pFile->AddTSC2VideoTrack(timeScale,
+                                                sampleDuration,
+                                                width,
+                                                height);
+            }
+            catch( Exception* x ) {
+                mp4v2::impl::log.errorf(*x);
+                delete x;
+            }
+            catch( ... ) {
+                mp4v2::impl::log.errorf( "%s: failed", __FUNCTION__ );
+            }
+        }
+        return MP4_INVALID_TRACK_ID;
+    }
+
+
     MP4TrackId MP4AddEncVideoTrack(MP4FileHandle hFile,
                                    uint32_t timeScale,
                                    MP4Duration sampleDuration,
@@ -2560,6 +2588,26 @@ MP4FileHandle MP4ReadProvider( const char* fileName, const MP4FileProvider* file
         }
         return false;
     }
+   
+    void MP4FreeH264SeqPictHeaders(uint8_t** pSeqHeaders,
+                                   uint32_t* pSeqHeaderSize,
+                                   uint8_t** pPictHeader,
+                                   uint32_t* pPictHeaderSize )
+    {
+        uint32_t ix;
+
+        for (ix = 0; pSeqHeaderSize[ix] != 0; ++ix) {
+            free(pSeqHeaders[ix]);
+        }
+        free(pSeqHeaders);
+        free(pSeqHeaderSize);
+
+        for (ix = 0; pPictHeaderSize[ix] != 0; ++ix) {
+            free(pPictHeader[ix]);
+        }
+        free(pPictHeader);
+        free(pPictHeaderSize);
+    }
 
     void MP4FreeH264SeqPictHeaders(uint8_t** pSeqHeaders,
                                    uint32_t* pSeqHeaderSize,
@@ -2767,6 +2815,29 @@ MP4FileHandle MP4ReadProvider( const char* fileName, const MP4FileProvider* file
         return false;
     }
 
+    bool MP4GetTrackAtomData (MP4FileHandle hFile, MP4TrackId trackId, const char *atomName, uint8_t ** outAtomData, uint64_t * outDataSize)
+    {
+        if (MP4_IS_VALID_FILE_HANDLE(hFile)) {
+            try {
+                return ((MP4File *)hFile)->GetTrackAtomData(trackId, atomName, outAtomData, outDataSize);
+            } catch( Exception* x ) {
+                mp4v2::impl::log.errorf(*x);
+                delete x;
+            }
+            catch( ... ) {
+                mp4v2::impl::log.errorf( "%s: failed", __FUNCTION__ );
+            }
+        }
+        return false;
+    }
+
+    MP4V2_EXPORT
+    void MP4FreeTrackAtomData(uint8_t * pAtomData)
+    {
+       if (pAtomData)
+          free(pAtomData);
+    }
+   
     bool MP4GetTrackIntegerProperty (
         MP4FileHandle hFile, MP4TrackId trackId,
         const char* propName,
@@ -3183,6 +3254,28 @@ MP4FileHandle MP4ReadProvider( const char* fileName, const MP4FileProvider* file
         }
         return 0;
     }
+
+    uint64_t MP4GetSampleFileOffset(
+        MP4FileHandle hFile,
+        MP4TrackId    trackId,
+        MP4SampleId   sampleId )
+    {
+        if (MP4_IS_VALID_FILE_HANDLE(hFile)) {
+            try {
+                return ((MP4File*)hFile)->GetSampleFileOffset(
+                           trackId, sampleId);
+            }
+            catch( Exception* x ) {
+                mp4v2::impl::log.errorf(*x);
+                delete x;
+            }
+            catch( ... ) {
+                mp4v2::impl::log.errorf( "%s: failed", __FUNCTION__ );
+            }
+        }
+        return 0;
+    }
+
 
     uint32_t MP4GetTrackMaxSampleSize(
         MP4FileHandle hFile,
@@ -4530,6 +4623,12 @@ bool MP4GetTrackName(
     return false;
 }
 
+void MP4FreeTrackName(char * pTrackName)
+{
+   if (pTrackName)
+      free(pTrackName);
+}
+   
 ///////////////////////////////////////////////////////////////////////////////
 
 bool MP4SetTrackName(
